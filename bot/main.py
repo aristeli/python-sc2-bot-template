@@ -27,6 +27,8 @@ class ZergRushBot(sc2.BotAI):
         self.moved_workers_to_gas = False
         self.moved_workers_from_gas = False
         self.mboost_started = False
+        self.meleeweapons_done = False
+        self.meleearmor_done = False
         self.rally_point = None
         self.spawn_point = None
         self.rush_started = False
@@ -79,11 +81,21 @@ class ZergRushBot(sc2.BotAI):
                 await self.do(sp.first(RESEARCH_ZERGLINGMETABOLICBOOST))
                 self.mboost_started = True
 
-            if not self.moved_workers_from_gas:
-                self.moved_workers_from_gas = True
-                for drone in self.workers:
-                    m = self.state.mineral_field.closer_than(10, drone.position)
-                    await self.do(drone.gather(m.random, queue=True))
+        if self.units(SPAWNINGPOOL).ready.exists:
+            if self.can_afford(EVOLUTIONCHAMBER) and not self.already_pending(EVOLUTIONCHAMBER) and not self.units(EVOLUTIONCHAMBER).ready.exists:
+                location = self.units(SPAWNINGPOOL).ready.first
+                await self.build(EVOLUTIONCHAMBER, near=location)
+
+        if self.units(EVOLUTIONCHAMBER).ready.exists and self.vespene >= 100 and hatcheries.amount > 1:
+            ev = self.units(EVOLUTIONCHAMBER).ready.first
+            if not self.meleeweapons_done:
+                err = await self.do(ev(RESEARCH_ZERGMELEEWEAPONS))
+                if not err:
+                    self.meleeweapons_done = True
+            elif not self.meleearmor_done:
+                err = await self.do(ev(RESEARCH_ZERGGROUNDARMOR))
+                if not err:
+                    self.meleearmor_done = True
 
         if self.supply_left < (2 + hatcheries.ready.amount):
             being_built = self.units_being_built('Overlord')
