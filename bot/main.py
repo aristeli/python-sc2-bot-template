@@ -83,8 +83,11 @@ class ZergRushBot(sc2.BotAI):
 
         if self.units(SPAWNINGPOOL).ready.exists:
             if self.can_afford(EVOLUTIONCHAMBER) and not self.already_pending(EVOLUTIONCHAMBER) and not self.units(EVOLUTIONCHAMBER).ready.exists:
+                def is_not_gas_worker(worker):
+                    return not worker in self.gas_workers
+                drone = self.workers.filter(is_not_gas_worker).random
                 location = self.units(SPAWNINGPOOL).ready.first
-                await self.build(EVOLUTIONCHAMBER, near=location)
+                await self.build(EVOLUTIONCHAMBER, near=location, unit=drone)
 
         if self.units(EVOLUTIONCHAMBER).ready.exists and self.vespene >= 100 and hatcheries.amount > 1:
             ev = self.units(EVOLUTIONCHAMBER).ready.first
@@ -120,7 +123,8 @@ class ZergRushBot(sc2.BotAI):
         if self.units(EXTRACTOR).ready.exists and not self.moved_workers_to_gas:
             self.moved_workers_to_gas = True
             extractor = self.units(EXTRACTOR).first
-            for drone in self.workers.random_group_of(3):
+            self.gas_workers = self.workers.random_group_of(3)
+            for drone in self.gas_workers:
                 await self.do(drone.gather(extractor))
 
         for drone in self.units(DRONE).idle:
