@@ -184,8 +184,12 @@ class ZergRushBot(sc2.BotAI):
                 next_tumor_pos = creeptumor.position.random_on_distance(6 + 10 * random.random())
                 target = self.enemy_start_locations[0]
                 # next_tumor_pos = creeptumor.position.to2.towards_random_angle(self.enemy_start_locations[0], pi/8, 6 + 6 * random.random())
+                done = False
                 for d in range(12, 2, -2):
-                    next_tumor_pos = creeptumor.position.to2.towards(target, 5).random_on_distance(d)
-                    err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
-                    if not err:
-                        break
+                    for i in range(10):
+                        if done:
+                            continue
+                        next_tumor_pos = creeptumor.position.to2.towards(target, d).random_on_distance(5)
+                        err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
+                        if not err:
+                            done = True
