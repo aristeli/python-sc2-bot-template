@@ -165,7 +165,7 @@ class ZergRushBot(sc2.BotAI):
                 for d in range(4, 15):
                     pos = hatchery.position.to2.towards(self.game_info.map_center, d)
                     if await self.can_place(SPAWNINGPOOL, pos):
-                        drone = self.workers.closest_to(pos)
+                        drone = self.workers.filter(self.is_not_gas_worker).closest_to(pos)
                         err = await self.do(drone.build(SPAWNINGPOOL, pos))
                         if not err:
                             self.spawning_pool_started = True
@@ -218,4 +218,4 @@ class ZergRushBot(sc2.BotAI):
                             done = True
 
     def is_not_gas_worker(self, worker):
-        return not worker in self.gas_workers
+        return not worker.tag in list(map(lambda gw: gw.tag, self.gas_workers))
