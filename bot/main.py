@@ -49,7 +49,8 @@ class ZergRushBot(sc2.BotAI):
         await self.attack_logic()
 
         for overlord in self.units(OVERLORD).idle:
-            await self.do(overlord(MOVE, Point2((0,0))))
+            if overlord.position.x > 30 and overlord.position.y > 30 and random.random() < 0.1:
+                await self.do(overlord(MOVE, Point2((0, 0))))
 
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
