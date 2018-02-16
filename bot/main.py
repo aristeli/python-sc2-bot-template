@@ -30,7 +30,6 @@ class ZergRushBot(sc2.BotAI):
         self.rally_point = None
         self.spawn_point = None
         self.rush_started = False
-        self.last_unit_built = ''
 
     async def on_step(self, iteration):
         if iteration == 0:
@@ -89,7 +88,7 @@ class ZergRushBot(sc2.BotAI):
             if self.can_afford(OVERLORD) and larvae.exists and self.units_being_built('Overlord') == 0:
                 await self.do(larvae.random.train(OVERLORD))
 
-        if self.can_afford(DRONE) and self.last_unit_built is not 'drone':
+        if self.can_afford(DRONE):
             for hatchery in hatcheries.ready:
                 hatchery_drones = self.units(DRONE).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
 
@@ -98,12 +97,10 @@ class ZergRushBot(sc2.BotAI):
                 if hatchery_drones.amount + len(hatching_drones) < MAX_DRONES_PER_HATCHERY and len(hatching_drones) == 0:
                     usable_larvae = larvae.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
                     if usable_larvae.exists and self.can_afford(DRONE):
-                        self.last_unit_built = 'drone'
                         await self.do(usable_larvae.random.train(DRONE))
 
         if self.units(SPAWNINGPOOL).ready.exists:
             if larvae.exists and self.can_afford(ZERGLING):
-                self.last_unit_built = 'zergling'
                 await self.do(larvae.random.train(ZERGLING))
 
         if self.units(EXTRACTOR).ready.exists and not self.moved_workers_to_gas:
