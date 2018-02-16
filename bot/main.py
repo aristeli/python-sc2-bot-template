@@ -7,7 +7,7 @@ from sc2.player import Bot, Computer
 
 rally_point_towards_center = 40
 
-MAX_HATCHERIES = 2
+MAX_HATCHERIES = 3
 RUSH_AFTER_N_ZERGLINGS = 30
 EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
 DRONE_BELONGS_TO_HATCHERY_DISTANCE = 10
@@ -148,7 +148,7 @@ class ZergRushBot(sc2.BotAI):
                 len(cur.orders) == 0 and queens.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, cur.position).amount == 0
             )
             if self.can_afford(QUEEN) and hatcheries_without_queen.amount > 0:
-                await self.do(hatcheries[0].train(QUEEN))
+                await self.do(hatcheries_without_queen[0].train(QUEEN))
 
     def units_being_built(self, unit_name):
         hatching_eggs = self.units(EGG)
