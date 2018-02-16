@@ -1,2 +1,2 @@
 # re-export
-from .main import MyBot
+from .main import ZergRushBot
