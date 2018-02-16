@@ -7,6 +7,8 @@ from sc2.player import Bot, Computer
 
 rally_point_towards_center = 40
 
+EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
+
 class ZergRushBot(sc2.BotAI):
     def __init__(self):
         self.drone_counter = 0
@@ -17,6 +19,7 @@ class ZergRushBot(sc2.BotAI):
         self.queeen_started = False
         self.mboost_started = False
         self.rally_point = None
+        self.spawn_point = None
 
     async def on_step(self, iteration):
         if iteration == 0:
@@ -28,6 +31,8 @@ class ZergRushBot(sc2.BotAI):
             return
 
         hatchery = self.units(HATCHERY).ready.first
+        if not self.spawn_point and hatchery:
+            self.spawn_point = hatchery.position
         larvae = self.units(LARVA)
 
         enemy_target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
@@ -75,11 +80,11 @@ class ZergRushBot(sc2.BotAI):
                 await self.do(drone.gather(extractor))
 
         if self.minerals > 500:
-            pos = hatchery.position.sort_by_distance(self.expansion_locations.keys())[1]
-            print('building hatchery at', pos)
-            err = await self.build(HATCHERY, pos)
-            if not err:
-                self.spawning_pool_started = True
+            pos = self.find_unused_closest_expansion()
+            if pos:
+                err = await self.build(HATCHERY, pos)
+                if not err:
+                    self.spawning_pool_started = True
             #for d in range(4, 15):
                 #pos = hatchery.position.to2.towards(self.game_info.map_center, d)
                 #if await self.can_place(HATCHERY, pos):
@@ -116,3 +121,16 @@ class ZergRushBot(sc2.BotAI):
                 r = await self.do(hatchery.train(QUEEN))
                 if not r:
                     self.queeen_started = True
+
+    def find_unused_closest_expansion(self):
+        hatcheries = self.units(HATCHERY)
+        closest_expansions = self.spawn_point.sort_by_distance(self.expansion_locations.keys())
+
+        def filter_unused(expansion):
+            nearby_hatcheries = hatcheries.closer_than(EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN, expansion)
+            return len(nearby_hatcheries) == 0
+
+        unused_expansions = list(filter(filter_unused, closest_expansions))
+        if len(unused_expansions) == 0:
+            return None
+        return unused_expansions[0]
