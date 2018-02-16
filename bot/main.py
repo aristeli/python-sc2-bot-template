@@ -111,7 +111,11 @@ class ZergRushBot(sc2.BotAI):
 
                 hatching_eggs = self.units(EGG).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
                 hatching_drones = list(filter(lambda egg: len(egg.orders) > 0 and egg.orders[0].ability._proto.button_name == 'Drone', hatching_eggs))
-                if hatchery_drones.amount + len(hatching_drones) < MAX_DRONES_PER_HATCHERY and len(hatching_drones) == 0:
+
+                extractor_nearby = self.units(EXTRACTOR).closer_than(10, hatchery.position).exists
+
+                drones_cap = MAX_DRONES_PER_HATCHERY + (2 if extractor_nearby else 0)
+                if hatchery_drones.amount + len(hatching_drones) < drones_cap and len(hatching_drones) == 0:
                     usable_larvae = larvae.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
                     if usable_larvae.exists and self.can_afford(DRONE):
                         await self.do(usable_larvae.random.train(DRONE))
