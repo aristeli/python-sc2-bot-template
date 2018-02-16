@@ -16,6 +16,7 @@ class ZergRushBot(sc2.BotAI):
         self.moved_workers_from_gas = False
         self.queeen_started = False
         self.mboost_started = False
+        self.rally_point = None
 
     async def on_step(self, iteration):
         if iteration == 0:
@@ -30,7 +31,8 @@ class ZergRushBot(sc2.BotAI):
         larvae = self.units(LARVA)
 
         enemy_target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
-        rally_point = hatchery.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
+        if not self.rally_point:
+            self.rally_point = hatchery.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
 
         zerglings = self.units(ZERGLING)
         if zerglings.amount > 50:
@@ -38,8 +40,8 @@ class ZergRushBot(sc2.BotAI):
                 await self.do(zl.attack(enemy_target))
 
         for zl in self.units(ZERGLING).idle:
-            # todo logic to determine when to use rally_point or enemy_target
-            await self.do(zl.attack(rally_point))
+            if zl.position.distance_to(self.rally_point) >= 15:
+                await self.do(zl.attack(self.rally_point))
 
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
