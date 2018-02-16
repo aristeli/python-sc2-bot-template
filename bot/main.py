@@ -85,8 +85,9 @@ class ZergRushBot(sc2.BotAI):
                     m = self.state.mineral_field.closer_than(10, drone.position)
                     await self.do(drone.gather(m.random, queue=True))
 
-        if self.supply_left < 2:
-            if self.can_afford(OVERLORD) and larvae.exists and self.units_being_built('Overlord') == 0:
+        if self.supply_left < (2 + hatcheries.ready.amount):
+            being_built = self.units_being_built('Overlord')
+            if self.can_afford(OVERLORD) and larvae.exists and (being_built == 0 or being_built < hatcheries.ready.amount + 1):
                 await self.do(larvae.random.train(OVERLORD))
 
         if self.can_afford(DRONE):
