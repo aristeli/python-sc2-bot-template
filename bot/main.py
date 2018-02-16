@@ -105,7 +105,7 @@ class ZergRushBot(sc2.BotAI):
             await self.do(drone.gather(self.state.mineral_field.closest_to(drone.position)))
 
         if self.minerals > 500 and len(hatcheries) < MAX_HATCHERIES:
-            pos = self.find_unused_closest_expansion()
+            pos = await self.get_next_expansion()
             if pos:
                 err = await self.build(HATCHERY, pos)
                 if not err:
@@ -146,19 +146,6 @@ class ZergRushBot(sc2.BotAI):
                 r = await self.do(hatchery.train(QUEEN))
                 if not r:
                     self.queeen_started = True
-
-    def find_unused_closest_expansion(self):
-        hatcheries = self.units(HATCHERY)
-        closest_expansions = self.spawn_point.sort_by_distance(self.expansion_locations.keys())
-
-        def filter_unused(expansion):
-            nearby_hatcheries = hatcheries.closer_than(EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN, expansion)
-            return len(nearby_hatcheries) == 0
-
-        unused_expansions = list(filter(filter_unused, closest_expansions))
-        if len(unused_expansions) == 0:
-            return None
-        return unused_expansions[0]
 
     def units_being_built(self, unit_name):
         hatching_eggs = self.units(EGG)
