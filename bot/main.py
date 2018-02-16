@@ -10,11 +10,11 @@ from sc2.position import Point2
 rally_point_towards_center = 40
 
 MAX_HATCHERIES = 3
-RUSH_AFTER_N_ZERGLINGS = 30
+RUSH_AFTER_N_ZERGLINGS = 24
+RUSH_AFTER_TIME = 6500
 EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
 DRONE_BELONGS_TO_HATCHERY_DISTANCE = 10
 QUEEN_BELONGS_TO_HATCHERY_DISTANCE = 20
-
 
 MAX_DRONES_PER_HATCHERY = 16
 
@@ -103,7 +103,7 @@ class ZergRushBot(sc2.BotAI):
             if self.can_afford(OVERLORD) and larvae.exists and (being_built == 0 or being_built < hatcheries.ready.amount + 1):
                 await self.do(larvae.random.train(OVERLORD))
 
-        if self.can_afford(DRONE):
+        if self.can_afford(DRONE) and self.spawning_pool_started:
             for hatchery in hatcheries.ready:
                 hatchery_drones = self.units(DRONE).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
 
@@ -185,7 +185,7 @@ class ZergRushBot(sc2.BotAI):
             self.rally_point = self.spawn_point.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
 
         zerglings = self.units(ZERGLING)
-        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started or self.state.game_loop > 7000:
+        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started or self.state.game_loop > RUSH_AFTER_TIME:
             self.rush_started = True
             for zl in zerglings:
                 await self.do(zl.attack(enemy_target))
