@@ -45,19 +45,7 @@ class ZergRushBot(sc2.BotAI):
             self.spawn_point = hatchery.position
         larvae = self.units(LARVA)
 
-        enemy_target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
-        if not self.rally_point:
-            self.rally_point = hatchery.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
-
-        zerglings = self.units(ZERGLING)
-        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started:
-            self.rush_started = True
-            for zl in zerglings:
-                await self.do(zl.attack(enemy_target))
-
-        for zl in self.units(ZERGLING).idle:
-            if zl.position.distance_to(self.rally_point) >= 15:
-                await self.do(zl.attack(self.rally_point))
+        await self.attack_logic()
 
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
@@ -172,6 +160,21 @@ class ZergRushBot(sc2.BotAI):
             )
             if self.can_afford(QUEEN) and hatcheries_without_queen.amount > 0:
                 await self.do(hatcheries_without_queen[0].train(QUEEN))
+
+    async def attack_logic(self):
+        enemy_target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
+        if not self.rally_point:
+            self.rally_point = self.spawn_point.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
+
+        zerglings = self.units(ZERGLING)
+        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started:
+            self.rush_started = True
+            for zl in zerglings:
+                await self.do(zl.attack(enemy_target))
+
+        for zl in self.units(ZERGLING).idle:
+            if zl.position.distance_to(self.rally_point) >= 15:
+                await self.do(zl.attack(self.rally_point))
 
     def units_being_built(self, unit_name):
         hatching_eggs = self.units(EGG)
