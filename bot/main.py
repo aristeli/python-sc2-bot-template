@@ -5,6 +5,8 @@ from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer
 
+rally_point_towards_center = 40
+
 class ZergRushBot(sc2.BotAI):
     def __init__(self):
         self.drone_counter = 0
@@ -27,9 +29,17 @@ class ZergRushBot(sc2.BotAI):
         hatchery = self.units(HATCHERY).ready.first
         larvae = self.units(LARVA)
 
-        target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
+        enemy_target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
+        rally_point = hatchery.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
+
+        zerglings = self.units(ZERGLING)
+        if zerglings.amount > 50:
+            for zl in zerglings:
+                await self.do(zl.attack(enemy_target))
+
         for zl in self.units(ZERGLING).idle:
-            await self.do(zl.attack(target))
+            # todo logic to determine when to use rally_point or enemy_target
+            await self.do(zl.attack(rally_point))
 
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
@@ -99,12 +109,3 @@ class ZergRushBot(sc2.BotAI):
                 r = await self.do(hatchery.train(QUEEN))
                 if not r:
                     self.queeen_started = True
-
-def main():
-    sc2.run_game(sc2.maps.get("Abyssal Reef LE"), [
-        Bot(Race.Zerg, ZergRushBot()),
-        Computer(Race.Terran, Difficulty.Medium)
-    ], realtime=False, save_replay_as="ZvT.SC2Replay")
-
-if __name__ == '__main__':
-    main()
