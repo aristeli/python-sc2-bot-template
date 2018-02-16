@@ -185,7 +185,7 @@ class ZergRushBot(sc2.BotAI):
             self.rally_point = self.spawn_point.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
 
         zerglings = self.units(ZERGLING)
-        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started:
+        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started or self.state.game_loop > 7000:
             self.rush_started = True
             for zl in zerglings:
                 await self.do(zl.attack(enemy_target))
