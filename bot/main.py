@@ -7,6 +7,7 @@ from sc2.player import Bot, Computer
 
 rally_point_towards_center = 40
 
+RUSH_AFTER_N_ZERGLINGS = 30
 EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
 
 class ZergRushBot(sc2.BotAI):
@@ -20,6 +21,7 @@ class ZergRushBot(sc2.BotAI):
         self.mboost_started = False
         self.rally_point = None
         self.spawn_point = None
+        self.rush_started = False
 
     async def on_step(self, iteration):
         if iteration == 0:
@@ -40,7 +42,8 @@ class ZergRushBot(sc2.BotAI):
             self.rally_point = hatchery.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
 
         zerglings = self.units(ZERGLING)
-        if zerglings.amount > 50:
+        if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started:
+            self.rush_started = True
             for zl in zerglings:
                 await self.do(zl.attack(enemy_target))
 
