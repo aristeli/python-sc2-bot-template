@@ -67,7 +67,7 @@ class ZergRushBot(sc2.BotAI):
                     await self.do(queen(EFFECT_INJECTLARVA, closest_hatchery))
 
 
-        await this.do_creep_tumors()
+        await self.do_creep_tumors()
 
         if self.vespene >= 100:
             sp = self.units(SPAWNINGPOOL).ready
