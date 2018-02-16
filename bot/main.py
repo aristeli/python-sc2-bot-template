@@ -7,6 +7,7 @@ from sc2.player import Bot, Computer
 
 rally_point_towards_center = 40
 
+MAX_HATCHERIES = 2
 RUSH_AFTER_N_ZERGLINGS = 30
 EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
 
@@ -82,7 +83,8 @@ class ZergRushBot(sc2.BotAI):
             for drone in self.workers.random_group_of(3):
                 await self.do(drone.gather(extractor))
 
-        if self.minerals > 500:
+        hatcheries = self.units(HATCHERY)
+        if self.minerals > 500 and len(hatcheries) < MAX_HATCHERIES:
             pos = self.find_unused_closest_expansion()
             if pos:
                 err = await self.build(HATCHERY, pos)
