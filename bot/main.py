@@ -10,9 +10,11 @@ rally_point_towards_center = 40
 
 MAX_HATCHERIES = 3
 MAX_HATCHERIES = 2
-RUSH_AFTER_N_ZERGLINGS = 25
+RUSH_AFTER_N_ZERGLINGS = 30
 EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
 DRONE_BELONGS_TO_HATCHERY_DISTANCE = 10
+QUEEN_BELONGS_TO_HATCHERY_DISTANCE = 20
+
 
 MAX_DRONES_PER_HATCHERY = 16
 
@@ -156,7 +158,7 @@ class ZergRushBot(sc2.BotAI):
         elif self.units(SPAWNINGPOOL).ready.exists:
             queens = self.units(QUEEN)
             hatcheries_without_queen = hatcheries.ready.filter(lambda cur:
-                len(cur.orders) == 0 and queens.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, cur.position).amount == 0
+                len(cur.orders) == 0 and queens.closer_than(QUEEN_BELONGS_TO_HATCHERY_DISTANCE, cur.position).amount == 0
             )
             if self.can_afford(QUEEN) and hatcheries_without_queen.amount > 0:
                 await self.do(hatcheries_without_queen[0].train(QUEEN))
