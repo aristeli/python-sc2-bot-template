@@ -93,7 +93,7 @@ class ZergRushBot(sc2.BotAI):
                 hatching_drones = list(filter(lambda egg: len(egg.orders) > 0 and egg.orders[0].ability._proto.button_name == 'Drone', hatching_eggs))
                 if hatchery_drones.amount + len(hatching_drones) < MAX_DRONES_PER_HATCHERY and len(hatching_drones) == 0:
                     usable_larvae = larvae.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
-                    if usable_larvae.exists:
+                    if usable_larvae.exists and self.can_afford(DRONE):
                         self.last_unit_built = 'drone'
                         await self.do(usable_larvae.random.train(DRONE))
 
@@ -182,5 +182,10 @@ class ZergRushBot(sc2.BotAI):
             abilities = await self.get_available_abilities(creeptumor)
             if AbilityId.BUILD_CREEPTUMOR_TUMOR in abilities:
                 next_tumor_pos = creeptumor.position.random_on_distance(6 + 10 * random.random())
+                target = self.enemy_start_locations[0]
                 # next_tumor_pos = creeptumor.position.to2.towards_random_angle(self.enemy_start_locations[0], pi/8, 6 + 6 * random.random())
-                await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
+                for i in range(10):
+                    next_tumor_pos = creeptumor.position.to2.towards(target, 5).random_on_distance(5)
+                    err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
+                    if not err:
+                        break
