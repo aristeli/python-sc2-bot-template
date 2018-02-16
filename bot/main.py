@@ -21,7 +21,6 @@ class ZergRushBot(sc2.BotAI):
         self.spawning_pool_started = False
         self.moved_workers_to_gas = False
         self.moved_workers_from_gas = False
-        self.queeen_started = False
         self.mboost_started = False
         self.rally_point = None
         self.spawn_point = None
@@ -37,6 +36,7 @@ class ZergRushBot(sc2.BotAI):
                 await self.do(unit.attack(self.enemy_start_locations[0]))
             return
 
+        hatcheries = self.units(HATCHERY)
         hatchery = self.units(HATCHERY).ready.first
         if not self.spawn_point and hatchery:
             self.spawn_point = hatchery.position
@@ -59,7 +59,9 @@ class ZergRushBot(sc2.BotAI):
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
             if AbilityId.EFFECT_INJECTLARVA in abilities:
-                await self.do(queen(EFFECT_INJECTLARVA, hatchery))
+                closest_hatchery = hatcheries.ready.closest_to(queen.position)
+                if closest_hatchery:
+                    await self.do(queen(EFFECT_INJECTLARVA, closest_hatchery))
 
         if self.vespene >= 100:
             sp = self.units(SPAWNINGPOOL).ready
@@ -77,7 +79,6 @@ class ZergRushBot(sc2.BotAI):
             if self.can_afford(OVERLORD) and larvae.exists and self.units_being_built('Overlord') == 0:
                 await self.do(larvae.random.train(OVERLORD))
 
-        hatcheries = self.units(HATCHERY)
         if self.can_afford(DRONE) and self.last_unit_built is not 'drone':
             for hatchery in hatcheries.ready:
                 hatchery_drones = self.units(DRONE).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
@@ -141,11 +142,13 @@ class ZergRushBot(sc2.BotAI):
                             self.spawning_pool_started = True
                             break
 
-        elif not self.queeen_started and self.units(SPAWNINGPOOL).ready.exists:
-            if self.can_afford(QUEEN):
-                r = await self.do(hatchery.train(QUEEN))
-                if not r:
-                    self.queeen_started = True
+        elif self.units(SPAWNINGPOOL).ready.exists:
+            queens = self.units(QUEEN)
+            hatcheries_without_queen = hatcheries.ready.filter(lambda cur:
+                len(cur.orders) == 0 and queens.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, cur.position).amount == 0
+            )
+            if self.can_afford(QUEEN) and hatcheries_without_queen.amount > 0:
+                await self.do(hatcheries[0].train(QUEEN))
 
     def units_being_built(self, unit_name):
         hatching_eggs = self.units(EGG)
