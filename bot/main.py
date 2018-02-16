@@ -75,12 +75,17 @@ class ZergRushBot(sc2.BotAI):
                 await self.do(drone.gather(extractor))
 
         if self.minerals > 500:
-            for d in range(4, 15):
-                pos = hatchery.position.to2.towards(self.game_info.map_center, d)
-                if await self.can_place(HATCHERY, pos):
-                    self.spawning_pool_started = True
-                    await self.do(self.workers.random.build(HATCHERY, pos))
-                    break
+            pos = hatchery.position.sort_by_distance(self.expansion_locations.keys())[1]
+            print('building hatchery at', pos)
+            err = await self.build(HATCHERY, pos)
+            if not err:
+                self.spawning_pool_started = True
+            #for d in range(4, 15):
+                #pos = hatchery.position.to2.towards(self.game_info.map_center, d)
+                #if await self.can_place(HATCHERY, pos):
+                    #self.spawning_pool_started = True
+                    #await self.do(self.workers.random.build(HATCHERY, pos))
+                    #break
 
         if self.drone_counter < 3:
             if self.can_afford(DRONE):
