@@ -10,6 +10,9 @@ rally_point_towards_center = 40
 MAX_HATCHERIES = 2
 RUSH_AFTER_N_ZERGLINGS = 30
 EXPANSION_IS_USED_IF_DISTANCE_TO_HATCHERY_IS_LESS_THAN = 10
+DRONE_BELONGS_TO_HATCHERY_DISTANCE = 10
+
+MAX_DRONES_PER_HATCHERY = 16
 
 class ZergRushBot(sc2.BotAI):
     def __init__(self):
@@ -74,13 +77,23 @@ class ZergRushBot(sc2.BotAI):
             if self.can_afford(OVERLORD) and larvae.exists:
                 await self.do(larvae.random.train(OVERLORD))
 
+        hatcheries = self.units(HATCHERY)
+        if self.can_afford(DRONE) and self.last_unit_built is not 'drone':
+            for hatchery in hatcheries.ready:
+                hatchery_drones = self.units(DRONE).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
+
+                hatching_eggs = self.units(EGG).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
+                hatching_drones = list(filter(lambda egg: len(egg.orders) > 0 and egg.orders[0].ability._proto.button_name == 'Drone', hatching_eggs))
+                if hatchery_drones.amount + len(hatching_drones) < MAX_DRONES_PER_HATCHERY:
+                    usable_larvae = larvae.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
+                    if usable_larvae.exists:
+                        self.last_unit_built = 'drone'
+                        await self.do(usable_larvae.random.train(DRONE))
+
         if self.units(SPAWNINGPOOL).ready.exists:
-            if larvae.exists and self.can_afford(ZERGLING) and self.last_unit_built is not 'zergling':
+            if larvae.exists and self.can_afford(ZERGLING):
                 self.last_unit_built = 'zergling'
                 await self.do(larvae.random.train(ZERGLING))
-            elif larvae.exists and self.can_afford(DRONE) and self.last_unit_built is not 'drone':
-                self.last_unit_built = 'drone'
-                await self.do(larvae.random.train(DRONE))
 
         if self.units(EXTRACTOR).ready.exists and not self.moved_workers_to_gas:
             self.moved_workers_to_gas = True
@@ -91,7 +104,6 @@ class ZergRushBot(sc2.BotAI):
         for drone in self.units(DRONE).idle:
             await self.do(drone.gather(self.state.mineral_field.closest_to(drone.position)))
 
-        hatcheries = self.units(HATCHERY)
         if self.minerals > 500 and len(hatcheries) < MAX_HATCHERIES:
             pos = self.find_unused_closest_expansion()
             if pos:
