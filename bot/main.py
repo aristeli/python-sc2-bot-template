@@ -74,7 +74,7 @@ class ZergRushBot(sc2.BotAI):
                     await self.do(drone.gather(m.random, queue=True))
 
         if self.supply_left < 2:
-            if self.can_afford(OVERLORD) and larvae.exists:
+            if self.can_afford(OVERLORD) and larvae.exists and self.units_being_built('Overlord') == 0:
                 await self.do(larvae.random.train(OVERLORD))
 
         hatcheries = self.units(HATCHERY)
@@ -84,7 +84,7 @@ class ZergRushBot(sc2.BotAI):
 
                 hatching_eggs = self.units(EGG).closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
                 hatching_drones = list(filter(lambda egg: len(egg.orders) > 0 and egg.orders[0].ability._proto.button_name == 'Drone', hatching_eggs))
-                if hatchery_drones.amount + len(hatching_drones) < MAX_DRONES_PER_HATCHERY:
+                if hatchery_drones.amount + len(hatching_drones) < MAX_DRONES_PER_HATCHERY and len(hatching_drones) == 0:
                     usable_larvae = larvae.closer_than(DRONE_BELONGS_TO_HATCHERY_DISTANCE, hatchery.position)
                     if usable_larvae.exists:
                         self.last_unit_built = 'drone'
@@ -159,3 +159,8 @@ class ZergRushBot(sc2.BotAI):
         if len(unused_expansions) == 0:
             return None
         return unused_expansions[0]
+
+    def units_being_built(self, unit_name):
+        hatching_eggs = self.units(EGG)
+        hatching_units = list(filter(lambda egg: len(egg.orders) > 0 and egg.orders[0].ability._proto.button_name == unit_name, hatching_eggs))
+        return len(hatching_units)
