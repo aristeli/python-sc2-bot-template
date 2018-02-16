@@ -1,4 +1,5 @@
 import random
+from math import pi
 
 import sc2
 from sc2 import Race, Difficulty
@@ -19,6 +20,7 @@ class ZergRushBot(sc2.BotAI):
     def __init__(self):
         self.drone_counter = 0
         self.extractor_started = False
+        self.first_creep_tumor_built = False
         self.spawning_pool_started = False
         self.moved_workers_to_gas = False
         self.moved_workers_from_gas = False
@@ -59,10 +61,30 @@ class ZergRushBot(sc2.BotAI):
 
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
-            if AbilityId.EFFECT_INJECTLARVA in abilities:
+            if AbilityId.BUILD_CREEPTUMOR_QUEEN in abilities and not self.first_creep_tumor_built and self.units(SPAWNINGPOOL).ready.exists:
+                print("Building first creep tumor")
+                first_spawning_pool_pos = self.units(SPAWNINGPOOL).ready.first.position
+                first_tumor_pos = first_spawning_pool_pos.to2.towards(self.game_info.map_center, 6)
+                # can_place does not work here for some reason
+                # if await self.can_place(CREEPTUMORQUEEN, first_tumor_pos):
+                err = await self.do(queen(BUILD_CREEPTUMOR_QUEEN, first_tumor_pos))
+                if not err:
+                    print("First creep tumor built.")
+                    self.first_creep_tumor_built = True
+                    break
+            if self.first_creep_tumor_built and AbilityId.EFFECT_INJECTLARVA in abilities:
                 closest_hatchery = hatcheries.ready.closest_to(queen.position)
                 if closest_hatchery:
                     await self.do(queen(EFFECT_INJECTLARVA, closest_hatchery))
+
+
+        # Expand creep tumors
+        for creeptumor in self.units(CREEPTUMORBURROWED).ready:
+            abilities = await self.get_available_abilities(creeptumor)
+            if AbilityId.BUILD_CREEPTUMOR_TUMOR in abilities:
+                next_tumor_pos = creeptumor.position.random_on_distance(6 + 10 * random.random())
+                # next_tumor_pos = creeptumor.position.to2.towards_random_angle(self.enemy_start_locations[0], pi/8, 6 + 6 * random.random())
+                await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
 
         if self.vespene >= 100:
             sp = self.units(SPAWNINGPOOL).ready
