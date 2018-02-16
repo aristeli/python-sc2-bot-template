@@ -67,13 +67,7 @@ class ZergRushBot(sc2.BotAI):
                     await self.do(queen(EFFECT_INJECTLARVA, closest_hatchery))
 
 
-        # Expand creep tumors
-        for creeptumor in self.units(CREEPTUMORBURROWED).ready:
-            abilities = await self.get_available_abilities(creeptumor)
-            if AbilityId.BUILD_CREEPTUMOR_TUMOR in abilities:
-                next_tumor_pos = creeptumor.position.random_on_distance(6 + 10 * random.random())
-                # next_tumor_pos = creeptumor.position.to2.towards_random_angle(self.enemy_start_locations[0], pi/8, 6 + 6 * random.random())
-                await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
+        await this.do_creep_tumors()
 
         if self.vespene >= 100:
             sp = self.units(SPAWNINGPOOL).ready
@@ -181,3 +175,12 @@ class ZergRushBot(sc2.BotAI):
         hatching_eggs = self.units(EGG)
         hatching_units = list(filter(lambda egg: len(egg.orders) > 0 and egg.orders[0].ability._proto.button_name == unit_name, hatching_eggs))
         return len(hatching_units)
+
+    async def do_creep_tumors(self):
+        # Expand creep tumors
+        for creeptumor in self.units(CREEPTUMORBURROWED).ready:
+            abilities = await self.get_available_abilities(creeptumor)
+            if AbilityId.BUILD_CREEPTUMOR_TUMOR in abilities:
+                next_tumor_pos = creeptumor.position.random_on_distance(6 + 10 * random.random())
+                # next_tumor_pos = creeptumor.position.to2.towards_random_angle(self.enemy_start_locations[0], pi/8, 6 + 6 * random.random())
+                await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
