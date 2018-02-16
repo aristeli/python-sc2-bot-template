@@ -132,7 +132,7 @@ class ZergRushBot(sc2.BotAI):
         for drone in self.units(DRONE).idle:
             await self.do(drone.gather(self.state.mineral_field.closest_to(drone.position)))
 
-        if self.minerals > 500 and len(hatcheries) < MAX_HATCHERIES:
+        if (self.minerals > 500 and len(hatcheries) < MAX_HATCHERIES) or self.minerals > 1000:
             pos = await self.get_next_expansion()
             if pos:
                 drone = self.workers.filter(self.is_not_gas_worker).closest_to(pos)
