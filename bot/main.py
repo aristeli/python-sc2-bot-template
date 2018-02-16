@@ -83,9 +83,7 @@ class ZergRushBot(sc2.BotAI):
 
         if self.units(SPAWNINGPOOL).ready.exists:
             if self.can_afford(EVOLUTIONCHAMBER) and not self.already_pending(EVOLUTIONCHAMBER) and not self.units(EVOLUTIONCHAMBER).ready.exists:
-                def is_not_gas_worker(worker):
-                    return not worker in self.gas_workers
-                drone = self.workers.filter(is_not_gas_worker).random
+                drone = self.workers.filter(self.is_not_gas_worker).random
                 location = self.units(SPAWNINGPOOL).ready.first
                 await self.build(EVOLUTIONCHAMBER, near=location, unit=drone)
 
@@ -137,9 +135,11 @@ class ZergRushBot(sc2.BotAI):
         if self.minerals > 500 and len(hatcheries) < MAX_HATCHERIES:
             pos = await self.get_next_expansion()
             if pos:
-                err = await self.build(HATCHERY, pos)
-                if not err:
-                    self.spawning_pool_started = True
+                drone = self.workers.filter(self.is_not_gas_worker).closest_to(pos)
+                if drone:
+                    err = await self.build(HATCHERY, pos, unit=drone)
+                    if not err:
+                        self.spawning_pool_started = True
             #for d in range(4, 15):
                 #pos = hatchery.position.to2.towards(self.game_info.map_center, d)
                 #if await self.can_place(HATCHERY, pos):
@@ -216,3 +216,6 @@ class ZergRushBot(sc2.BotAI):
                         err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
                         if not err:
                             done = True
+
+    def is_not_gas_worker(self, worker):
+        return not worker in self.gas_workers
