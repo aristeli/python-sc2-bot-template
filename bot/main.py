@@ -5,6 +5,7 @@ import sc2
 from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer
+from sc2.position import Point2
 
 rally_point_towards_center = 40
 
@@ -47,6 +48,9 @@ class ZergRushBot(sc2.BotAI):
         larvae = self.units(LARVA)
 
         await self.attack_logic()
+
+        for overlord in self.units(OVERLORD).idle:
+            await self.do(overlord(MOVE, Point2((0,0))))
 
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
