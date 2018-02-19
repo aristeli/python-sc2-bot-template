@@ -1,5 +1,6 @@
 import random
 from math import pi
+import itertools
 
 import sc2
 from sc2 import Race, Difficulty
@@ -203,19 +204,40 @@ class ZergRushBot(sc2.BotAI):
         # Expand creep tumors
         for creeptumor in self.units(CREEPTUMORBURROWED).ready:
             abilities = await self.get_available_abilities(creeptumor)
-            if AbilityId.BUILD_CREEPTUMOR_TUMOR in abilities:
-                next_tumor_pos = creeptumor.position.random_on_distance(6 + 10 * random.random())
-                target = self.enemy_start_locations[0]
-                # next_tumor_pos = creeptumor.position.to2.towards_random_angle(self.enemy_start_locations[0], pi/8, 6 + 6 * random.random())
-                done = False
-                for d in range(12, 2, -2):
-                    for i in range(10):
-                        if done:
-                            continue
-                        next_tumor_pos = creeptumor.position.to2.towards(target, d).random_on_distance(5)
-                        err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, next_tumor_pos))
-                        if not err:
-                            done = True
+            if not AbilityId.BUILD_CREEPTUMOR_TUMOR in abilities:
+                continue
+
+            cur_pos = creeptumor.position.to2
+            tumor_positions = [Point2((x + cur_pos.x, y + cur_pos.y)) for (x, y) in itertools.product(range(-5, 5), range(-5, 5))]
+            pathing_target = None
+            async def pathing_distance(tumor_pos):
+                nonlocal pathing_target
+                (cur_distance, new_pathing_target) = await self.do_pathing_to_enemy_base(tumor_pos, pathing_target) 
+                if new_pathing_target:
+                    pathing_target = new_pathing_target
+                return cur_distance
+            tumor_positions_with_distance = [(tumor_pos, await pathing_distance(tumor_pos)) for tumor_pos in tumor_positions]
+            usable_positions = [(pos, d) for (pos, d) in tumor_positions_with_distance if d is not None]
+            for (pos, d) in sorted(usable_positions, key=lambda pos_and_d: pos_and_d[1]):
+                err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, pos))
+                if not err:
+                    break
+                    print('built creep tumor')
 
     def is_not_gas_worker(self, worker):
         return not worker.tag in list(map(lambda gw: gw.tag, self.gas_workers))
+
+    async def do_pathing_to_enemy_base(self, start, pathable_target):
+        target = self.enemy_start_locations[0]
+        if not pathable_target:
+            for (dx, dy) in itertools.product(range(-10, 10), range(-10, 10)):
+                cur_target = Point2((target.x + dx, target.y + dy))
+                if await self._client.query_pathing(start, cur_target) is not None:
+                    print('found a valid target!')
+                    pathable_target = cur_target
+                    break
+        
+        if not pathable_target:
+            return (None, None)
+
+        return (await self._client.query_pathing(start, pathable_target), pathable_target)
