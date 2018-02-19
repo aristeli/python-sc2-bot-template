@@ -37,6 +37,7 @@ class ZergRushBot(sc2.BotAI):
     async def on_step(self, iteration):
         if iteration == 0:
             await self.chat_send("(glhf)")
+            await self.find_ramps()
 
         if not self.units(HATCHERY).ready.exists:
             for unit in self.workers | self.units(ZERGLING) | self.units(QUEEN):
@@ -49,7 +50,13 @@ class ZergRushBot(sc2.BotAI):
             self.spawn_point = hatchery.position
         larvae = self.units(LARVA)
 
-        await self.attack_logic()
+        #await self.attack_logic()
+        closest_ramp_top = sorted(self.ramp_top_tiles, key=lambda pos: pos.distance_to(self.spawn_point))[0]
+        for worker in sorted(self.workers, key=lambda worker: worker.tag)[0:1]:
+            if iteration == 0:
+                print('ordering', worker.position,'to',closest_ramp_top)
+                await self.do(worker.attack(closest_ramp_top))
+        return
 
         for overlord in self.units(OVERLORD).idle:
             if random.random() < 0.02 and (overlord.position.x > 10 or overlord.position.y > 10):
@@ -248,3 +255,50 @@ class ZergRushBot(sc2.BotAI):
             return (None, None)
 
         return (await self._client.query_pathing(start, pathable_target), pathable_target)
+
+    async def find_ramps(self):
+        pathing = self.game_info.pathing_grid
+        height = self.game_info.terrain_height
+        all_tiles = [pos for pos in itertools.product(range(0, pathing.width), range(0, pathing.height))]
+        walkable_tiles = [Point2(pos) for pos in all_tiles if pathing.is_empty(pos)]
+
+        ramp_bottom_tiles = []
+        ramp_top_tiles = []
+        ramp_middle_tiles = []
+
+        for tile in walkable_tiles:
+            tile_height = height[tile]
+            tile_neighbours = [(tile[0] + dx, tile[1] + dy) for (dx, dy) in itertools.product(range(-1, 2), range(-1, 2)) if not (dx == 0 and dy == 0)]
+            walkable_neighbours = [tile for tile in tile_neighbours if pathing.is_empty(tile)]
+            neighbour_heights = [height[tile] for tile in walkable_neighbours]
+            has_higher_neighbours = len([1 for neighbour_height in neighbour_heights if neighbour_height > tile_height]) > 0
+            has_lower_neighbours = len([1 for neighbour_height in neighbour_heights if neighbour_height < tile_height]) > 0
+            if has_higher_neighbours and has_lower_neighbours:
+                ramp_middle_tiles.append(tile)
+            elif has_higher_neighbours:
+                ramp_bottom_tiles.append(tile)
+            elif has_lower_neighbours:
+                ramp_top_tiles.append(tile)
+
+        # print what we've found for debug
+        for y in range(pathing.height):
+            for x in range(pathing.width):
+                char = " "
+                if (x,y) in ramp_top_tiles:
+                    char = "T"
+                elif (x,y) in ramp_bottom_tiles:
+                    char = "B"
+                elif (x,y) in ramp_middle_tiles:
+                    char = "M"
+                elif pathing.is_set((x, y)):
+                    char = "#"
+                print(char, end="")
+            print("")
+
+        def change_to_game_coordinates(tiles):
+            return [Point2((x, pathing.height - y)) for (x, y) in tiles]
+
+        self.ramp_bottom_tiles = change_to_game_coordinates(ramp_bottom_tiles)
+        self.ramp_top_tiles = change_to_game_coordinates(ramp_top_tiles)
+        self.ramp_middle_tiles = change_to_game_coordinates(ramp_middle_tiles)
+        
