@@ -208,7 +208,8 @@ class ZergRushBot(sc2.BotAI):
                 continue
 
             cur_pos = creeptumor.position.to2
-            tumor_positions = [Point2((x + cur_pos.x, y + cur_pos.y)) for (x, y) in itertools.product(range(-5, 5), range(-5, 5))]
+            tumor_positions = [Point2((x + cur_pos.x, y + cur_pos.y)) for (x, y) in itertools.product(range(-5, 6), range(-5, 6))]
+            print('trying positions', tumor_positions)
             pathing_target = None
             async def pathing_distance(tumor_pos):
                 nonlocal pathing_target
@@ -218,11 +219,17 @@ class ZergRushBot(sc2.BotAI):
                 return cur_distance
             tumor_positions_with_distance = [(tumor_pos, await pathing_distance(tumor_pos)) for tumor_pos in tumor_positions]
             usable_positions = [(pos, d) for (pos, d) in tumor_positions_with_distance if d is not None]
-            for (pos, d) in sorted(usable_positions, key=lambda pos_and_d: pos_and_d[1]):
+            sorted_positions = sorted(usable_positions, key=lambda pos_and_d: pos_and_d[1])
+            built = False
+            print('sorted positions', sorted_positions)
+            for (pos, d) in sorted_positions:
                 err = await self.do(creeptumor(BUILD_CREEPTUMOR_TUMOR, pos))
                 if not err:
-                    break
                     print('built creep tumor')
+                    built = True
+                    break
+            if not built:
+                print('failed to build creep tumor!')
 
     def is_not_gas_worker(self, worker):
         return not worker.tag in list(map(lambda gw: gw.tag, self.gas_workers))
@@ -230,10 +237,10 @@ class ZergRushBot(sc2.BotAI):
     async def do_pathing_to_enemy_base(self, start, pathable_target):
         target = self.enemy_start_locations[0]
         if not pathable_target:
-            for (dx, dy) in itertools.product(range(-10, 10), range(-10, 10)):
+            for (dx, dy) in itertools.product(range(-10, 11), range(-10, 11)):
                 cur_target = Point2((target.x + dx, target.y + dy))
                 if await self._client.query_pathing(start, cur_target) is not None:
-                    print('found a valid target!')
+                    print('found a valid target!', cur_target)
                     pathable_target = cur_target
                     break
         
