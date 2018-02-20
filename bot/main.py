@@ -257,38 +257,61 @@ class ZergRushBot(sc2.BotAI):
         return (await self._client.query_pathing(start, pathable_target), pathable_target)
 
     async def find_ramps(self):
+        MIN_RAMP_SIZE = 6
         pathing = self.game_info.pathing_grid
         height = self.game_info.terrain_height
         all_tiles = [pos for pos in itertools.product(range(0, pathing.width), range(0, pathing.height))]
         walkable_tiles = [Point2(pos) for pos in all_tiles if pathing.is_empty(pos)]
 
-        ramp_bottom_tiles = []
-        ramp_top_tiles = []
-        ramp_middle_tiles = []
+        ramp_tiles = []
 
+        neighbour_offsets = [(dx, dy) for (dx, dy) in itertools.product(range(-1, 2), range(-1, 2)) if not (dx == 0 and dy == 0)]
         for tile in walkable_tiles:
             tile_height = height[tile]
-            tile_neighbours = [(tile[0] + dx, tile[1] + dy) for (dx, dy) in itertools.product(range(-1, 2), range(-1, 2)) if not (dx == 0 and dy == 0)]
+            tile_neighbours = [(tile[0] + dx, tile[1] + dy) for (dx, dy) in neighbour_offsets]
             walkable_neighbours = [tile for tile in tile_neighbours if pathing.is_empty(tile)]
             neighbour_heights = [height[tile] for tile in walkable_neighbours]
             has_higher_neighbours = len([1 for neighbour_height in neighbour_heights if neighbour_height > tile_height]) > 0
             has_lower_neighbours = len([1 for neighbour_height in neighbour_heights if neighbour_height < tile_height]) > 0
-            if has_higher_neighbours and has_lower_neighbours:
-                ramp_middle_tiles.append(tile)
-            elif has_higher_neighbours:
-                ramp_bottom_tiles.append(tile)
-            elif has_lower_neighbours:
-                ramp_top_tiles.append(tile)
+            if has_higher_neighbours or has_lower_neighbours:
+                ramp_tiles.append(tile)
+
+        filtered_bottoms = []
+        filtered_middles = []
+        filtered_tops = []
+        seen_tiles = {}
+        for tile in ramp_tiles:
+            if tile in seen_tiles:
+                continue
+            this_ramp_tiles = []
+            def loop_neighbours(tile):
+                nonlocal seen_tiles, this_ramp_tiles, ramp_tiles, neighbour_offsets
+                if tile in seen_tiles or tile not in ramp_tiles:
+                    return
+                this_ramp_tiles.append(tile)
+                seen_tiles[tile] = True
+                tile_neighbours = [(tile[0] + dx, tile[1] + dy) for (dx, dy) in neighbour_offsets]
+                for new_tile in tile_neighbours:
+                    loop_neighbours(new_tile)
+            loop_neighbours(tile)
+            if len(this_ramp_tiles) < MIN_RAMP_SIZE:
+                continue
+            this_ramp_heights = [height[tile] for tile in this_ramp_tiles]
+            ramp_max_height = max(this_ramp_heights)
+            ramp_min_height = min(this_ramp_heights)
+            filtered_tops.extend([tile for tile in this_ramp_tiles if height[tile] == ramp_max_height])
+            filtered_bottoms.extend([tile for tile in this_ramp_tiles if height[tile] == ramp_min_height])
+            filtered_middles.extend([tile for tile in this_ramp_tiles if ramp_max_height > height[tile] > ramp_min_height])
 
         # print what we've found for debug
         for y in range(pathing.height):
             for x in range(pathing.width):
                 char = " "
-                if (x,y) in ramp_top_tiles:
+                if (x,y) in filtered_tops:
                     char = "T"
-                elif (x,y) in ramp_bottom_tiles:
+                elif (x,y) in filtered_bottoms:
                     char = "B"
-                elif (x,y) in ramp_middle_tiles:
+                elif (x,y) in filtered_middles:
                     char = "M"
                 elif pathing.is_set((x, y)):
                     char = "#"
@@ -298,7 +321,7 @@ class ZergRushBot(sc2.BotAI):
         def change_to_game_coordinates(tiles):
             return [Point2((x, pathing.height - y)) for (x, y) in tiles]
 
-        self.ramp_bottom_tiles = change_to_game_coordinates(ramp_bottom_tiles)
-        self.ramp_top_tiles = change_to_game_coordinates(ramp_top_tiles)
-        self.ramp_middle_tiles = change_to_game_coordinates(ramp_middle_tiles)
+        self.ramp_bottom_tiles = change_to_game_coordinates(filtered_bottoms)
+        self.ramp_top_tiles = change_to_game_coordinates(filtered_tops)
+        self.ramp_middle_tiles = change_to_game_coordinates(filtered_middles)
         
