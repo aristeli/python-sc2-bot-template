@@ -7,6 +7,7 @@ from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer
 from sc2.position import Point2
+from math import floor
 
 rally_point_towards_center = 40
 
@@ -212,6 +213,11 @@ class ZergRushBot(sc2.BotAI):
 
             cur_pos = creeptumor.position.to2
             tumor_positions = [Point2((x + cur_pos.x, y + cur_pos.y)) for (x, y) in itertools.product(range(-5, 6), range(-5, 6))]
+            print('potential positions before pathing_grid', len(tumor_positions))
+            tumor_positions = [Point2((x,y)) for (x,y) in tumor_positions if self.game_info.pathing_grid.is_empty((floor(x), floor(self.game_info.pathing_grid.height - y)))]
+            print('potential positions after pathing_grid', len(tumor_positions))
+            tumor_positions = sorted(tumor_positions, key=lambda pos: pos.distance_to(self.enemy_start_locations[0]))
+            print('current tumor pos', cur_pos)
             print('trying positions', tumor_positions)
             pathing_target = None
             async def pathing_distance(tumor_pos):
