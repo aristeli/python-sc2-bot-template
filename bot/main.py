@@ -30,7 +30,6 @@ class ZergRushBot(sc2.BotAI):
         self.mboost_started = False
         self.meleeweapons_done = False
         self.meleearmor_done = False
-        self.rally_point = None
         self.spawn_point = None
         self.rush_started = False
 
@@ -50,13 +49,7 @@ class ZergRushBot(sc2.BotAI):
             self.spawn_point = hatchery.position
         larvae = self.units(LARVA)
 
-        #await self.attack_logic()
-        closest_ramp_top = sorted(self.ramp_top_tiles, key=lambda pos: pos.distance_to(self.spawn_point))[0]
-        for worker in sorted(self.workers, key=lambda worker: worker.tag)[0:1]:
-            if iteration == 0:
-                print('ordering', worker.position,'to',closest_ramp_top)
-                await self.do(worker.attack(closest_ramp_top))
-        return
+        await self.attack_logic()
 
         for overlord in self.units(OVERLORD).idle:
             if random.random() < 0.02 and (overlord.position.x > 10 or overlord.position.y > 10):
@@ -189,18 +182,21 @@ class ZergRushBot(sc2.BotAI):
 
     async def attack_logic(self):
         enemy_target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
-        if not self.rally_point:
-            self.rally_point = self.spawn_point.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
+
+        closest_ramp_top = sorted(self.ramp_top_tiles, key=lambda pos: pos.distance_to(self.spawn_point))[0]
+        rally_point = closest_ramp_top
+        if self.units(HATCHERY).amount > 1:
+            rally_point = self.spawn_point.position.to2.towards(self.game_info.map_center, rally_point_towards_center)
 
         zerglings = self.units(ZERGLING)
         if zerglings.amount > RUSH_AFTER_N_ZERGLINGS or self.rush_started or self.state.game_loop > RUSH_AFTER_TIME:
             self.rush_started = True
             for zl in zerglings:
                 await self.do(zl.attack(enemy_target))
-
-        for zl in self.units(ZERGLING).idle:
-            if zl.position.distance_to(self.rally_point) >= 15:
-                await self.do(zl.attack(self.rally_point))
+        else:
+            for zl in self.units(ZERGLING).idle:
+                if zl.position.distance_to(rally_point) >= 10:
+                    await self.do(zl.attack(rally_point))
 
     def units_being_built(self, unit_name):
         hatching_eggs = self.units(EGG)
@@ -302,21 +298,6 @@ class ZergRushBot(sc2.BotAI):
             filtered_tops.extend([tile for tile in this_ramp_tiles if height[tile] == ramp_max_height])
             filtered_bottoms.extend([tile for tile in this_ramp_tiles if height[tile] == ramp_min_height])
             filtered_middles.extend([tile for tile in this_ramp_tiles if ramp_max_height > height[tile] > ramp_min_height])
-
-        # print what we've found for debug
-        for y in range(pathing.height):
-            for x in range(pathing.width):
-                char = " "
-                if (x,y) in filtered_tops:
-                    char = "T"
-                elif (x,y) in filtered_bottoms:
-                    char = "B"
-                elif (x,y) in filtered_middles:
-                    char = "M"
-                elif pathing.is_set((x, y)):
-                    char = "#"
-                print(char, end="")
-            print("")
 
         def change_to_game_coordinates(tiles):
             return [Point2((x, pathing.height - y)) for (x, y) in tiles]
