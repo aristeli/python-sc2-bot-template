@@ -268,8 +268,7 @@ class ZergRushBot(sc2.BotAI):
 
         for tile in walkable_tiles:
             tile_height = height[tile]
-            neighbour_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            tile_neighbours = [(tile[0] + dx, tile[1] + dy) for (dx, dy) in neighbour_offsets]
+            tile_neighbours = [(tile[0] + dx, tile[1] + dy) for (dx, dy) in itertools.product(range(-1, 2), range(-1, 2)) if not (dx == 0 and dy == 0)]
             walkable_neighbours = [tile for tile in tile_neighbours if pathing.is_empty(tile)]
             neighbour_heights = [height[tile] for tile in walkable_neighbours]
             has_higher_neighbours = len([1 for neighbour_height in neighbour_heights if neighbour_height > tile_height]) > 0
